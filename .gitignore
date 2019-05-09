@@ -1,0 +1,4 @@
+/statprof
+*.jl.mem
+*.mem
+docs/build/
