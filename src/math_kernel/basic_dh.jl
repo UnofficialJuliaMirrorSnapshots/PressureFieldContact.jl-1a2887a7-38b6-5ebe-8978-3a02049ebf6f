@@ -1,5 +1,7 @@
 
 """
+$(SIGNATURES)
+
 A structure that is assumed to hold a homogenous transform.
 """
 struct basic_dh{T}
@@ -43,11 +45,6 @@ struct basic_dh{T}
                                 zero(T), zero(T), zero(T), one(T))
         return new{T}(mat)
     end
-    # function basic_dh(;scale::SVector{3,T}) where {T}
-    #     return basic_dh(SMatrix{3,3,T,9}(scale[1], zero(T),  zero(T),
-    #                                      zero(T),  scale[2], zero(T),
-    #                                      zero(T),  zero(T),  scale[3]))
-    # end
     function basic_dh(d::Diagonal{T,SVector{3,T}}) where {T}
         return basic_dh(SMatrix{3,3,T,9}(d))
     end
@@ -56,6 +53,8 @@ struct basic_dh{T}
 end
 
 """
+$(SIGNATURES)
+
 Extracts the rotational and translational part of the transformation matrix.
 """
 function dh_R_t(a::basic_dh{T}) where {T}

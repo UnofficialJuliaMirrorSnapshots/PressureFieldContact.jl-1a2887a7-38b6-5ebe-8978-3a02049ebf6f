@@ -1,7 +1,7 @@
 
 module PressureFieldContact
 
-# using Printf
+using DocStringExtensions
 using StaticArrays
 using Rotations: Quat, Rotation, SPQuat, RotMatrix
 using ForwardDiff: Dual
@@ -10,13 +10,14 @@ using RigidBodyDynamics.Spatial: vector_to_skew_symmetric, vector_to_skew_symmet
 using GeometryTypes: HomogenousMesh, Face, Point
 using ColorTypes: RGBA
 using MeshCatMechanisms
+using DocStringExtensions
 using CoordinateTransformations: Translation
 
 include(joinpath("math_kernel", "NumericalTricks.jl"))
 using .NumericalTricks
 
-include(joinpath("Tri_Tet_Intersections", "Tri_Tet_Intersections.jl"))
-using .Tri_Tet_Intersections
+include(joinpath("clip", "Clip.jl"))
+using .Clip
 
 include(joinpath("obb", "Binary_BB_Trees.jl"))
 using .Binary_BB_Trees
@@ -24,13 +25,12 @@ using .Binary_BB_Trees
 include(joinpath("radau", "Radau.jl"))
 using .Radau
 
+include(joinpath("geometry", "Geometry.jl"))
+using .Geometry
+
 using LinearAlgebra
 using GenericLinearAlgebra
-using DocStringExtensions
 
-# const FRAME_ζ¹ = CartesianFrame3D("FRAME_ζ¹")
-# const FRAME_ζ² = CartesianFrame3D("FRAME_ζ²")
-# const FRAME_ϕ = CartesianFrame3D("FRAME_ϕ")
 
 include("structs.jl")
 include("body_inertia.jl")
@@ -45,10 +45,6 @@ include("example_integrator.jl")
 include("utility.jl")
 
 export
-    # FRAME_ζ¹,
-    # FRAME_ζ²,
-    # FRAME_ϕ,
-
     # structs.jl
     MeshInertiaInfo,
     ContactProperties,
