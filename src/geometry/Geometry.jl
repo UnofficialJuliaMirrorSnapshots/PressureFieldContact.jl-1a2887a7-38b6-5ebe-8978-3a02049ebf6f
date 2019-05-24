@@ -11,7 +11,7 @@ using StaticArrays
 using DataStructures
 using NearestNeighbors
 using ..Binary_BB_Trees
-using ..NumericalTricks
+using ..MathKernel
 
 
 include("mesh.jl")
@@ -21,7 +21,6 @@ include("extensions.jl")
 include("blob_types.jl")
 include("top_down.jl")
 include("util.jl")
-
 
 
 export
@@ -40,19 +39,19 @@ export
     get_tet,
     get_point,
     verify_mesh,
-    eMesh_transform!,
+    transform!,
     invert!,
     mesh_inplace_rekey!,
     mesh_remove_unused_points!,
     delete_triangles!,
     sub_div_mesh,
     mesh_repair!,
-    output_eMesh_half_plane,
-    output_eMesh_sphere,
-    output_eMesh_box,
+    eMesh_half_plane,
+    eMesh_sphere,
+    eMesh_box,
     crop_mesh,
     extrude_mesh,
-    output_eMesh_cylinder,
+    eMesh_cylinder,
 
     # mesh_create_rot_sym.jl
     obj_from_point_sequence,

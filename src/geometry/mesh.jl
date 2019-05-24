@@ -45,8 +45,21 @@ struct eMesh{T1<:Union{Nothing,Tri},T2<:Union{Nothing,Tet}}
     eMesh{Tri,Tet}()     = eMesh(Vector{SVector{3,Float64}}(), Vector{SVector{3,Int64}}(), Vector{SVector{4,Int64}}(), Vector{Float64}())
 end
 
+"""
+$(SIGNATURES)
+
+Converts an `eMesh` to a mesh that contains only tetrahedrons.
+You need to do this before adding an `eMesh` as contact geometry.
+"""
 as_tet_eMesh(e_mesh::eMesh{Tri,Tet}) = eMesh(e_mesh.point, nothing, e_mesh.tet, e_mesh.ϵ)
 as_tet_eMesh(e_mesh::eMesh{Nothing,Tet}) = deepcopy(e_mesh)
+
+"""
+$(SIGNATURES)
+
+Converts an `eMesh` to a mesh that contains only triangles.
+You need to do this before adding an `eMesh` as contact geometry.
+"""
 as_tri_eMesh(e_mesh::eMesh{Tri,Tet}) = eMesh(e_mesh.point, e_mesh.tri, nothing, nothing)
 as_tri_eMesh(e_mesh::eMesh{Tri,Nothing}) = deepcopy(e_mesh)
 
@@ -130,8 +143,14 @@ function verify_mesh_triangles(eM::eMesh{Tri,T2}) where {T2}
 end
 
 ### MESH MANIPULATION
+"""
+$(SIGNATURES)
 
-function eMesh_transform!(e_mesh::eMesh{T1,T2}, extra_args...) where {T1,T2}
+Creates a transformation matrix by creating a `basic_dh` from `extra_arguments` and then transforms the `eMesh`.
+See [`basic_dh`](@ref) for how to create common transformation types.
+Reflections are not allowed.
+"""
+function transform!(e_mesh::eMesh{T1,T2}, extra_args...) where {T1,T2}
     dh = basic_dh(extra_args...)
     point = e_mesh.point
     for k = 1:n_point(e_mesh)
@@ -386,7 +405,7 @@ $(SIGNATURES)
 
 Outputs an `eMesh` for a half-plane.
 """
-function output_eMesh_half_plane(plane_w::Float64=1.0, is_include_vis_sides::Bool=false)
+function eMesh_half_plane(plane_w::Float64=1.0, is_include_vis_sides::Bool=false)
     v1, v2, v3 = [SVector{3,Float64}(cos(theta), sin(theta), 0.0) for theta = (0.0, 2*pi/3, 4*pi/3)]
     v4 = SVector{3,Float64}(0.0, 0.0, -1.0) * plane_w
     point = [v1, v2, v3, v4]
@@ -403,9 +422,9 @@ end
 """
 $(SIGNATURES)
 
-Outputs an `eMesh` for a sphere. Larger values of n_div create finer discretizations.
+Outputs an `eMesh` for a sphere. Larger values of `n_div` create finer discretizations.
 """
-function output_eMesh_sphere(rad::Union{Float64,SVector{3,Float64}}=1.0, n_div::Int64=4)
+function eMesh_sphere(rad::Union{Float64,SVector{3,Float64}}=1.0, n_div::Int64=4)
     function make_icosahedron()
         φ = Base.MathConstants.golden
 
@@ -478,7 +497,7 @@ function output_eMesh_sphere(rad::Union{Float64,SVector{3,Float64}}=1.0, n_div::
     project_to_sphere!(eM_ico_div)
 
     rad = ones(SVector{3,Float64}) .* rad
-    eMesh_transform!(eM_ico_div, Diagonal(rad))
+    transform!(eM_ico_div, Diagonal(rad))
 
     return volumize_about(eM_ico_div)
 end
@@ -513,7 +532,7 @@ $(SIGNATURES)
 
 Outputs an `eMesh` for a box.
 """
-function output_eMesh_box(r::Union{Float64,SVector{3,Float64}}=1.0, c::SVector{3,Float64}=zeros(SVector{3,Float64}))
+function eMesh_box(r::Union{Float64,SVector{3,Float64}}=1.0, c::SVector{3,Float64}=zeros(SVector{3,Float64}))
     point = [
         SVector{3,Float64}(-1,-1,-1),
         SVector{3,Float64}(+1,-1,-1),
@@ -528,45 +547,10 @@ function output_eMesh_box(r::Union{Float64,SVector{3,Float64}}=1.0, c::SVector{3
     tri, tet, ϵ = output_box_ind()
     e_mesh = eMesh(point, tri, tet, ϵ)
     r = r .* ones(SVector{3,Float64})
-    eMesh_transform!(e_mesh, SMatrix{3,3,Float64,9}(r[1], 0, 0, 0, r[2], 0, 0, 0, r[3]))
-    eMesh_transform!(e_mesh, c)
+    transform!(e_mesh, SMatrix{3,3,Float64,9}(r[1], 0, 0, 0, r[2], 0, 0, 0, r[3]))
+    transform!(e_mesh, c)
     return e_mesh
 end
-
-# function make_cone_points(rⁱ::Float64, rᵒ::Float64, h::Float64, k_slice::Int64, tot_slice::Int64)
-#     polar_point(r::Float64, θ::Float64, z::Float64) = SVector{3,Float64}(r * cos(θ), r * sin(θ), z)
-#
-#     @assert(0 < rⁱ < rᵒ)
-#     @assert(0 < h)
-#     @assert(1 <= k_slice <= tot_slice)
-#
-#     v = Vector{SVector{3,Float64}}()
-#     θ_space = LinRange{Float64}(0.0, 2*pi, tot_slice + 1)
-#     θ_1 = θ_space[k_slice]
-#     θ_2 = θ_space[k_slice + 1]
-#     for k = 1:8
-#         θ = ifelse(mod1(k, 4) <= 2, θ_1, θ_2)
-#         r = ifelse(isodd(k), rⁱ, rᵒ)
-#         z = ifelse(k <= 4, -0.5, +0.5) * h
-#         push!(v, polar_point(r, θ, z))
-#     end
-#     push!(v, polar_point((rⁱ + rᵒ) / 2, (θ_1 + θ_2) / 2, 0.0))
-# end
-#
-# function output_eMesh_slice(rⁱ::Float64, rᵒ::Float64, h::Float64, k_slice::Int64, tot_slice::Int64)
-#     point = make_cone_points(rⁱ, rᵒ, h, k_slice, tot_slice)
-#     tri, tet, ϵ = output_box_ind()
-#     return eMesh(point, tri, tet, ϵ)
-# end
-#
-# function output_eMesh_hole(rⁱ::Float64, rᵒ::Float64, h::Float64, tot_slice::Int64)
-#     eM_cone = eMesh{Tri,Tet}()
-#     for k = 1:tot_slice
-#         append!(eM_cone, output_eMesh_slice(rⁱ, rᵒ, h, k, tot_slice))
-#     end
-#     return eM_cone
-# end
-
 
 const SF3 = SVector{3,Float64}
 const SI3 = SVector{3,Int64}
@@ -627,7 +611,8 @@ end
 $(SIGNATURES)
 
 Extrudes a planar `eMesh` of type `eMesh{Tri,Nothing}` into a type `eMesh{Tri,Tet}` in the direction of the plane
-normal. This direction is detected automatically. The function errors if the points do not lie on a plane.
+normal. This direction is detected automatically.
+The function errors if the points do not lie on a plane.
 """
 function extrude_mesh(surf::eMesh{Tri,Nothing}, thick::Float64)
 	n̂ = verify_trianges_have_same_normal(surf)
@@ -656,7 +641,7 @@ $(SIGNATURES)
 
 Outputs an `eMesh` for a cylinder.
 """
-function output_eMesh_cylinder(rad::Float64=1.0, height::Float64=1.0; n::Int64=6)
+function eMesh_cylinder(rad::Float64=1.0, height::Float64=1.0; n::Int64=6)
 	eM_circle = create_2D_circle(rad, n=n)
 	return extrude_mesh(eM_circle, height)
 end

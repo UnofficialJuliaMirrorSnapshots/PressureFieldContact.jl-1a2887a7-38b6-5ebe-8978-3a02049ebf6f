@@ -13,8 +13,8 @@ using MeshCatMechanisms
 using DocStringExtensions
 using CoordinateTransformations: Translation
 
-include(joinpath("math_kernel", "NumericalTricks.jl"))
-using .NumericalTricks
+include(joinpath("math_kernel", "MathKernel.jl"))
+using .MathKernel
 
 include(joinpath("clip", "Clip.jl"))
 using .Clip
@@ -66,11 +66,6 @@ export
     centroidVolumeCombo,
     equiv_volume,
 
-    # # matrix_transform.jl
-    # Point4D,
-    # MatrixTransform,
-    # getPoint,
-
     # mesh_body_utility.jl
     newBodyFromInertia,
     outputJointTransform_ParentChild,
@@ -95,7 +90,6 @@ export
     set_state_spq!,
     addMesh!,
     add_body_contact!,
-    # make_eTree_obb,
     add_contact!,
     add_body!,
     add_body_from_inertia!,  # this needs to be here
@@ -141,9 +135,11 @@ export
     find_mesh_id,
 
     # obb/Binary_BB_Trees.jl
-    output_eMesh_half_plane,
-    output_eMesh_sphere,
-    output_eMesh_box,
+    transform!,
+    eMesh_half_plane,
+    eMesh_sphere,
+    eMesh_box,
+    eMesh_cylinder,
     as_tet_eMesh,
     as_tri_eMesh,
     n_tri,
@@ -152,8 +148,12 @@ export
     get_tri,
     get_tet,
     get_point,
+    create_swept_mesh,
+    f_swept_triv,
+    f_swept_circle,
 
-    # math_kernel/NumericalTricks.jl
-    make_pd_gains
+    # math_kernel/MathKernel.jl
+    make_pd_gains,
+    basic_dh
 
 end
