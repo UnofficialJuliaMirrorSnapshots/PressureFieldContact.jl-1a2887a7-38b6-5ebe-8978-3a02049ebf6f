@@ -31,7 +31,7 @@ struct eMesh{T1<:Union{Nothing,Tri},T2<:Union{Nothing,Tet}}
             @assert(ϵ == nothing)
         end
         (T1_ == T2_ == Nothing) && error("a whole lot of nothing")
-        return new{T1_,T2_}(point, tri, tet, ϵ)
+        return new{T1_,T2_}(deepcopy(point), deepcopy(tri), deepcopy(tet), deepcopy(ϵ))
     end
     function eMesh(hm::HomogenousMesh, tet::Union{Nothing,Vector{SVector{4,Int64}}}=nothing,
             ϵ::Union{Nothing,Vector{Float64}}=nothing)
@@ -60,8 +60,22 @@ $(SIGNATURES)
 Converts an `eMesh` to a mesh that contains only triangles.
 You need to do this before adding an `eMesh` as contact geometry.
 """
-as_tri_eMesh(e_mesh::eMesh{Tri,Tet}) = eMesh(e_mesh.point, e_mesh.tri, nothing, nothing)
-as_tri_eMesh(e_mesh::eMesh{Tri,Nothing}) = deepcopy(e_mesh)
+as_tri_eMesh(e_mesh::eMesh{Tri,Tet}, is_repair::Bool=true) = eMesh(e_mesh.point, e_mesh.tri, nothing, nothing)
+as_tri_eMesh(e_mesh::eMesh{Tri,Nothing}, is_repair::Bool=true) = deepcopy(e_mesh)
+function as_tri_eMesh(eM::eMesh{Nothing,Tet}, is_repair::Bool=true)
+	i3 = Vector{SVector{3,Int64}}()
+	for k = 1:n_tet(eM)
+		i_tet = eM.tet[k]
+		ϵ_tet = eM.ϵ[i_tet]
+		i_tet_new = sort_so_big_ϵ_last(ϵ_tet, i_tet)
+		push!(i3, i_tet_new[1:3])
+	end
+	eM_tri = eMesh(eM.point, i3)
+	if is_repair
+		mesh_repair!(eM_tri)
+	end
+	return eM_tri
+end
 
 vertex_pos_for_tri_ind(eM::eMesh{Tri,T2}, k::Int64) where {T2} = eM.point[eM.tri[k]]
 vertex_pos_for_tet_ind(eM::eMesh{T1,Tet}, k::Int64) where {T1} = eM.point[eM.tet[k]]
@@ -111,13 +125,19 @@ function Base.append!(eM_1::eMesh{T1,T2}, eM_2::eMesh{T1,T2}) where {T1,T2}
 end
 
 ### VERIFICATION
-function verify_mesh(eM::eMesh{T1,T2}) where {T1,T2}
-    verify_mesh_triangles(eM)
-    verify_mesh_tets(eM)
+verify_mesh(eM::eMesh{Tri,Nothing}) = verify_mesh_tri(eM)
+verify_mesh(eM::eMesh{Nothing,Tet}) = verify_mesh_tet(eM)
+function verify_mesh(eM::eMesh{Tri,Tet})
+	eM_tri = as_tri_eMesh(eM)
+    eM_tet = as_tet_eMesh(eM)
+	verify_mesh_tri(eM_tri)
+	verify_mesh_tet(eM_tet)
+    eM_tri_2 = as_tri_eMesh(eM_tet)
+    (area(eM_tri) ≈ area(eM_tri_2)) || error("surfaces where penetration extent is 0.0 is not the same as the tri surface")
+	return nothing
 end
 
-verify_mesh_tets(eM::eMesh{T1,Nothing}) where {T1} = nothing
-function verify_mesh_tets(eM::eMesh{T1,Tet}) where {T1}
+function verify_mesh_tet(eM::eMesh{Nothing,Tet})
     length_tet = n_tet(eM)
     length_point = n_point(eM)
     length_ϵ = length(eM.ϵ)
@@ -134,8 +154,7 @@ function verify_mesh_tets(eM::eMesh{T1,Tet}) where {T1}
     return nothing
 end
 
-verify_mesh_triangles(eM::eMesh{Nothing,T2}) where {T2} = nothing
-function verify_mesh_triangles(eM::eMesh{Tri,T2}) where {T2}
+function verify_mesh_tri(eM::eMesh{Tri,Nothing})
     for k = 1:n_tri(eM)
         iΔ = eM.tri[k]
         point_Δ = eM.point[iΔ]
@@ -301,6 +320,8 @@ end
 
 delete_triangles!(e_mesh::eMesh{Nothing,T2}) where {T2} = -9999
 function delete_triangles!(e_mesh::eMesh{Tri,T2}) where {T2}
+	# TODO: fix this to only delete triangles for connected meshes
+
     ### make the first index lowest
     for k = 1:n_tri(e_mesh)
         iΔ = e_mesh.tri[k]
